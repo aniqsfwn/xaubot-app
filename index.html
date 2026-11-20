@@ -1,0 +1,594 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a1020">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="XauBot">
+<meta name="robots" content="noindex, nofollow">
+<title>XauBot</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+  :root { --font-anthropic-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; --font-anthropic-serif: "Iowan Old Style", "Palatino Linotype", Georgia, serif; color-scheme: dark; }
+  html, body { margin: 0; background: #0a1020; -webkit-text-size-adjust: 100%; }
+  #dash-root .xa-wrap { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  #xa-error { margin: 0; }
+</style>
+<style>
+  #dash-root { --dash-gutter: 0; }
+  /* XauBot app: dark trading-desk look, always dark by design */
+  .xa {
+    --xa-bg: #0a1020; --xa-card: #0f182b; --xa-card2: #121d33; --xa-line: #22304c; --xa-fg: #e8eef8; --xa-mut: #8b98b2;
+    --xa-cyan: #4fd6f2; --xa-up: #3ee6a0; --xa-down: #ff5c7a; --xa-warn: #f5b84a; --xa-violet: #9b8cff;
+    background: var(--xa-bg); color: var(--xa-fg); font-family: var(--font-anthropic-sans); min-height: 100%;
+    color-scheme: dark; padding-bottom: 8px;
+  }
+  .xa * { box-sizing: border-box; }
+  .xa-wrap { padding: 14px max(16px, env(safe-area-inset-left, 0px)) 0 max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 14px; max-width: 720px; margin: 0 auto; }
+  .xa-card { background: var(--xa-card); border: 1px solid var(--xa-line); border-radius: 18px; padding: 16px; min-width: 0; }
+  .xa-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .xa-sym { font-weight: 700; font-size: 20px; letter-spacing: .02em; }
+  .xa-small { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--xa-mut); }
+  .xa-price { font-size: 30px; font-weight: 700; color: var(--xa-cyan); font-variant-numeric: tabular-nums; text-align: right; }
+  .xa-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; letter-spacing: .1em; justify-content: flex-end; }
+  .xa-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; background: var(--xa-up); }
+  .xa-live.off { color: var(--xa-down); } .xa-live.off .xa-dot { background: var(--xa-down); }
+  .xa-live.on { color: var(--xa-up); }
+  .xa-pills { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .xa-brand { padding: 9px 16px; border-radius: 999px; background: linear-gradient(90deg, #7b6cff, #c08bff); color: #0b0a1a; font-weight: 800; letter-spacing: .12em; font-size: 13px; }
+  .xa-state { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--xa-line); font-size: 13px; font-weight: 600; }
+  .xa-state.ok { color: var(--xa-up); } .xa-state.ok .xa-dot { background: var(--xa-up); }
+  .xa-state.bad { color: var(--xa-down); border-color: color-mix(in srgb, var(--xa-down) 50%, var(--xa-line)); } .xa-state.bad .xa-dot { background: var(--xa-down); }
+  .xa-state.warn { color: var(--xa-warn); } .xa-state.warn .xa-dot { background: var(--xa-warn); }
+
+  .xa-sig { border-radius: 22px; padding: 18px; display: flex; flex-direction: column; gap: 14px; background: var(--xa-card); border: 1px solid var(--xa-line); }
+  .xa-sig.sell { border-color: color-mix(in srgb, var(--xa-down) 45%, var(--xa-line)); }
+  .xa-sig.buy { border-color: color-mix(in srgb, var(--xa-up) 45%, var(--xa-line)); }
+  .xa-sig-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .xa-sig-sym { font-size: 30px; font-weight: 800; }
+  .xa-side { padding: 10px 18px; border-radius: 14px; font-weight: 800; letter-spacing: .08em; font-size: 16px; border: 1px solid; }
+  .xa-side.sell { color: var(--xa-down); border-color: var(--xa-down); background: color-mix(in srgb, var(--xa-down) 10%, transparent); }
+  .xa-side.buy { color: var(--xa-up); border-color: var(--xa-up); background: color-mix(in srgb, var(--xa-up) 10%, transparent); }
+  .xa-tag { align-self: flex-start; padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 800; letter-spacing: .1em; border: 1px solid var(--xa-up); color: var(--xa-up); background: color-mix(in srgb, var(--xa-up) 8%, transparent); }
+  .xa-tag.wait { border-color: var(--xa-violet); color: var(--xa-violet); background: color-mix(in srgb, var(--xa-violet) 8%, transparent); }
+  .xa-run { display: flex; align-items: baseline; gap: 14px; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--xa-line); background: var(--xa-card2); flex-wrap: wrap; }
+  .xa-run .xa-small { letter-spacing: .12em; }
+  .xa-run-v { font-size: 34px; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .xa-run-sub { color: var(--xa-mut); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .xa-reason { border-left: 3px solid var(--xa-violet); background: var(--xa-card2); border-radius: 0 12px 12px 0; padding: 12px 14px; }
+  .xa-reason .xa-small { color: var(--xa-violet); }
+  .xa-reason h3 { margin: 6px 0 6px; font-size: 18px; font-weight: 600; }
+  .xa-reason ul { margin: 0; padding-left: 20px; color: #c8d2e6; line-height: 1.7; }
+  .xa-entry { text-align: center; padding: 14px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--xa-cyan) 35%, var(--xa-line)); background: color-mix(in srgb, var(--xa-cyan) 5%, var(--xa-card2)); }
+  .xa-entry .xa-small { color: var(--xa-cyan); }
+  .xa-entry-v { font-size: 40px; font-weight: 800; color: var(--xa-cyan); font-variant-numeric: tabular-nums; }
+  .xa-lv { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .xa-lv > div { text-align: center; padding: 12px 8px; border-radius: 14px; border: 1px solid var(--xa-line); background: var(--xa-card2); min-width: 0; }
+  .xa-lv > div.hit { border-color: var(--xa-up); box-shadow: 0 0 0 1px color-mix(in srgb, var(--xa-up) 40%, transparent) inset; }
+  .xa-lv > div.hit .xa-lv-v { color: var(--xa-up); }
+  .xa-lv > div.stop .xa-lv-v { color: var(--xa-down); }
+  .xa-lv > div.stop.safe .xa-lv-v { color: var(--xa-up); }
+  .xa-lv .xa-small { letter-spacing: .1em; }
+  .xa-lv-v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .xa-lv-n { font-size: 12px; color: var(--xa-mut); margin-top: 2px; }
+  .xa-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--xa-mut); font-size: 13px; flex-wrap: wrap; }
+  .xa-btn { background: transparent; color: var(--xa-fg); border: 1px solid var(--xa-line); border-radius: 999px; padding: 9px 16px; font: inherit; font-weight: 700; cursor: pointer; }
+  .xa-btn:focus-visible, .xa-nav button:focus-visible, .xa-seg button:focus-visible { outline: 2px solid var(--xa-cyan); outline-offset: 2px; }
+  .xa-check { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+  .xa-check li { display: flex; gap: 10px; align-items: center; font-size: 14px; }
+  .xa-check b { width: 22px; height: 22px; border-radius: 50%; display: inline-grid; place-items: center; font-size: 12px; flex: none; }
+  .xa-check .y b { background: color-mix(in srgb, var(--xa-up) 18%, transparent); color: var(--xa-up); }
+  .xa-check .n b { background: color-mix(in srgb, var(--xa-down) 18%, transparent); color: var(--xa-down); }
+
+  .xa-h { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 34px; margin: 4px 0 0; }
+  .xa-sub { color: var(--xa-mut); margin: 4px 0 0; font-size: 14px; }
+  .xa-big { text-align: center; padding: 22px 16px; border-top: 2px solid var(--xa-violet); }
+  .xa-big-v { font-size: 44px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .xa-big-n { color: var(--xa-mut); font-size: 13px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  .xa-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .xa-tile .xa-small { letter-spacing: .1em; }
+  .xa-tile-v { font-size: 30px; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .up { color: var(--xa-up); } .down { color: var(--xa-down); } .mut { color: var(--xa-mut); }
+  .xa-seg { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .xa-seg button { background: var(--xa-card); color: var(--xa-mut); border: 1px solid var(--xa-line); border-radius: 14px; padding: 12px; font: inherit; font-weight: 700; cursor: pointer; }
+  .xa-seg button.on { color: var(--xa-fg); border-color: var(--xa-violet); background: color-mix(in srgb, var(--xa-violet) 14%, var(--xa-card)); }
+  .xa-stepper { display: grid; grid-template-columns: 52px 1fr 52px; gap: 8px; }
+  .xa-stepper button { background: var(--xa-card); color: var(--xa-fg); border: 1px solid var(--xa-line); border-radius: 14px; font: inherit; font-size: 20px; cursor: pointer; }
+  .xa-stepper button:disabled { opacity: .35; cursor: default; }
+  .xa-period { text-align: center; padding: 12px; border-radius: 14px; border: 1px solid var(--xa-violet); color: var(--xa-violet); font-weight: 700; }
+  .xa-chart { position: relative; min-height: 210px; }
+  .xa-chart svg text { fill: var(--xa-mut); font-size: 11px; }
+  .xa-chart-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .xa-chart-head h3 { font-family: var(--font-anthropic-serif); font-weight: 400; font-size: 22px; margin: 0; }
+  .xa-chart-head span { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .xa-tip { position: absolute; pointer-events: none; background: #18233c; border: 1px solid var(--xa-line); border-radius: 10px; padding: 6px 8px; font-size: 12px; font-variant-numeric: tabular-nums; white-space: nowrap; z-index: 3; color: var(--xa-fg); }
+  .xa-empty { color: var(--xa-mut); font-size: 14px; padding: 18px 0; text-align: center; }
+  .xa-table-wrap { overflow-x: auto; }
+  .xa-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .xa-table th, .xa-table td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--xa-line); white-space: nowrap; }
+  .xa-table th { color: var(--xa-mut); font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+  .xa-table .num { text-align: right; }
+  .xa-bars { display: grid; gap: 12px; }
+  .xa-bar-top { display: flex; justify-content: space-between; font-size: 13px; font-variant-numeric: tabular-nums; }
+  .xa-track { height: 8px; border-radius: 999px; background: var(--xa-line); overflow: hidden; margin-top: 6px; }
+  .xa-fill { height: 100%; border-radius: 999px; }
+  .xa-rule { padding: 12px 14px; border-left: 3px solid var(--xa-up); background: var(--xa-card2); border-radius: 0 12px 12px 0; font-size: 14px; margin: 0; }
+  .xa-rule.warn { border-left-color: var(--xa-warn); } .xa-rule.bad { border-left-color: var(--xa-down); }
+  .xa-note { color: var(--xa-mut); font-size: 12px; line-height: 1.5; margin: 0; }
+  .xa-nav { position: sticky; bottom: 0; z-index: 5; margin-top: 16px; display: grid; grid-template-columns: repeat(5, 1fr); background: #0c1426; border-top: 1px solid var(--xa-line); padding: 6px max(8px, env(safe-area-inset-left, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-right, 0px)); }
+  .xa-nav button { background: none; border: 0; color: var(--xa-mut); font: inherit; font-size: 12px; display: grid; justify-items: center; gap: 3px; padding: 6px 2px; cursor: pointer; }
+  .xa-nav button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .xa-nav button.on { color: var(--xa-up); }
+</style>
+</head>
+<body>
+<div id="dash-root">
+
+
+<div class="xa" id="app">
+  <div class="xa-wrap">
+    <p id="xa-error" class="xa-rule bad" hidden></p>
+    <div class="xa-card xa-top" id="ticker">
+      <div><div class="xa-sym">XAUUSD</div><div class="xa-small">MT5 · MetaQuotes-Demo</div></div>
+      <div><div class="xa-price" data-draw="price_now" data-source="summary" data-field="bid" data-row="0">—</div><div class="xa-live" data-draw="live" data-source="summary"></div></div>
+    </div>
+    <div class="xa-pills">
+      <span class="xa-brand">XAUBOT · EA</span>
+      <span class="xa-state" data-draw="state" data-source="summary"></span>
+    </div>
+
+    <section id="signal" class="xa-sec">
+      <div data-draw="signal" data-source="open summary closed"></div>
+    </section>
+
+    <section id="stats" class="xa-sec" hidden>
+      <div>
+        <h2 class="xa-h">Stats</h2>
+        <p class="xa-sub">Closed trades, by server day. 1 pip = $0.10 on gold. R = result ÷ amount risked.</p>
+      </div>
+      <div style="height:12px"></div>
+      <div class="xa-card xa-big">
+        <div class="xa-small" data-draw="st_title">—</div>
+        <div class="xa-big-v" data-draw="st_pips" data-source="periods">—</div>
+        <div class="xa-big-n" data-draw="st_sub" data-source="periods">—</div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="xa-tiles">
+        <div class="xa-card xa-tile"><div class="xa-small">Win rate</div><div class="xa-tile-v" data-draw="st_win" data-source="periods">—</div></div>
+        <div class="xa-card xa-tile"><div class="xa-small">Trades closed</div><div class="xa-tile-v" data-draw="st_n" data-source="periods">—</div></div>
+        <div class="xa-card xa-tile"><div class="xa-small">TP / BE / Early</div><div class="xa-tile-v up" data-draw="st_mix" data-source="periods">—</div></div>
+        <div class="xa-card xa-tile"><div class="xa-small">SL hit</div><div class="xa-tile-v down" data-draw="st_sl" data-source="periods">—</div></div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="xa-card">
+        <div class="xa-chart-head"><h3 data-draw="st_chart_title">—</h3><span data-draw="st_chart_total" data-source="periods">—</span></div>
+        <div class="xa-chart" data-draw="st_chart" data-source="periods"></div>
+      </div>
+      <div style="height:10px"></div>
+      <div class="xa-seg" id="seg">
+        <button type="button" class="on" data-p="day">Daily</button>
+        <button type="button" data-p="week">Weekly</button>
+        <button type="button" data-p="month">Monthly</button>
+      </div>
+      <div style="height:8px"></div>
+      <div class="xa-stepper" id="stepper">
+        <button type="button" data-step="-1" aria-label="Earlier period">‹</button>
+        <div class="xa-period" data-draw="st_period">—</div>
+        <button type="button" data-step="1" aria-label="Later period">›</button>
+      </div>
+      <div style="height:10px"></div>
+      <p class="xa-note">Win rate counts only trades that closed more than 0.2R in profit. Break-even exits and losses count against it, and pips include every losing trade.</p>
+    </section>
+
+    <section id="chart" class="xa-sec" hidden>
+      <h2 class="xa-h">Chart</h2>
+      <p class="xa-sub">Gold, last 24 hours of 15-minute closes (server time). Dashed lines: entry, stop and target of open trades.</p>
+      <div style="height:10px"></div>
+      <div class="xa-card"><div class="xa-chart" data-draw="price" data-source="price open"></div></div>
+      <div style="height:14px"></div>
+      <h2 class="xa-h" style="font-size:26px">Result over time</h2>
+      <p class="xa-sub">Running total in R after each closed trade. Red dashed line: −10R, where the test stops.</p>
+      <div style="height:10px"></div>
+      <div class="xa-card"><div class="xa-chart" data-draw="curve" data-source="curve"></div></div>
+    </section>
+
+    <section id="trades" class="xa-sec" hidden>
+      <h2 class="xa-h">Trades</h2>
+      <p class="xa-sub">Every closed trade, newest first. Server time.</p>
+      <div style="height:10px"></div>
+      <div class="xa-card xa-table-wrap">
+        <table class="xa-table" data-source="closed" data-row-key="id">
+          <thead><tr>
+            <th data-field="exit_time">Closed</th><th data-field="dir">Side</th><th class="num" data-field="entry">Entry</th>
+            <th class="num" data-field="exit">Exit</th><th data-field="reason">Exit by</th><th class="num" data-field="r">R</th><th class="num" data-field="net">P&amp;L $</th>
+          </tr></thead>
+          <tbody data-draw="trades"></tbody>
+        </table>
+        <p class="xa-empty xa-trades-empty" hidden>No closed trades yet. Each one shows up here within about two minutes of closing.</p>
+      </div>
+    </section>
+
+    <section id="test" class="xa-sec" hidden>
+      <h2 class="xa-h">Test</h2>
+      <p class="xa-sub">Demo forward test of the Donchian trend breakout with gap protection. Minimum 4 weeks; going live is only considered after 40+ trades averaging +0.10R or better.</p>
+      <div style="height:10px"></div>
+      <div class="xa-card"><div class="xa-bars" data-draw="bars" data-source="summary"></div></div>
+      <div style="height:10px"></div>
+      <p class="xa-rule" data-draw="rule" data-source="summary">—</p>
+      <div style="height:10px"></div>
+      <div class="xa-tiles">
+        <div class="xa-card xa-tile"><div class="xa-small">Total</div><div class="xa-tile-v" data-draw="v_total" data-source="summary" data-field="total_r" data-row="0">—</div></div>
+        <div class="xa-card xa-tile"><div class="xa-small">Avg per trade</div><div class="xa-tile-v" data-draw="v_avg" data-source="summary" data-field="avg_r" data-row="0">—</div></div>
+        <div class="xa-card xa-tile"><div class="xa-small">Worst drawdown</div><div class="xa-tile-v" data-draw="v_dd" data-source="summary" data-field="max_dd_r" data-row="0">—</div></div>
+        <div class="xa-card xa-tile"><div class="xa-small">Equity</div><div class="xa-tile-v" data-draw="v_eq" data-source="summary" data-field="equity" data-row="0">—</div></div>
+      </div>
+      <div style="height:10px"></div>
+      <p class="xa-note" data-draw="updated" data-source="summary">—</p>
+      <p class="xa-note">Data comes from MT5 on your PC through a private GitHub Gist and refreshes about every minute while this app is open. It stops updating when the PC or MT5 is off. Backtest results don't promise future results.</p>
+    </section>
+  </div>
+
+  <nav class="xa-nav" id="nav" aria-label="Sections">
+    <button type="button" class="on" data-tab="signal"><svg viewBox="0 0 24 24"><path d="M3 12h4l3-7 4 14 3-7h4"/></svg>Signal</button>
+    <button type="button" data-tab="stats"><svg viewBox="0 0 24 24"><rect x="4" y="11" width="4" height="9" rx="1"/><rect x="10" y="6" width="4" height="14" rx="1"/><rect x="16" y="9" width="4" height="11" rx="1"/></svg>Stats</button>
+    <button type="button" data-tab="chart"><svg viewBox="0 0 24 24"><path d="M3 19h18M5 15l4-5 4 3 6-7"/></svg>Chart</button>
+    <button type="button" data-tab="trades"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 10v10"/></svg>Trades</button>
+    <button type="button" data-tab="test"><svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4-3 7-7 9-4-2-7-5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>Test</button>
+  </nav>
+</div>
+
+
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="config.js"></script>
+<script src="shim.js"></script>
+<script>
+  // ---- live file from Google Drive (text with Markdown escapes) ----
+  dash.loader('status', {
+    description: 'Takes the text of status.json from Google Drive, removes the backslash escapes Drive adds, and reads it as JSON.',
+    fn: ({ answer }) => {
+      let a = answer;
+      if (typeof a === 'string') { try { a = JSON.parse(a); } catch (e) { /* plain text */ } }
+      let text = (a && typeof a === 'object') ? a.fileContent : a;
+      if (typeof text !== 'string' || !text.trim()) throw new Error('Google Drive returned no content for status.json');
+      text = text.replace(/\\([\\`*_{}\[\]()#+\-.!|<>~])/g, '$1');
+      const obj = JSON.parse(text);
+      return { data: obj, meta: [{ label: 'Written by MT5 at (PC time)', value: String(obj.generated_local || '') }, { label: 'Server time', value: String(obj.generated || '') }] };
+    }
+  });
+
+  dash.calc('summary', {
+    title: 'Headline numbers', description: 'Totals and status from the latest status file.', inputs: ['status'],
+    fn: (status) => {
+      const s = status || {}, st = s.stats || {}, acc = s.account || {}, term = s.terminal || {}, test = s.test || {}, pr = s.price || {};
+      const toDate = (t) => { const m = /^(\d{4})\.(\d{2})\.(\d{2}) (\d{2}):(\d{2})/.exec(t || ''); return m ? new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]) : null; };
+      const start = toDate(test.start), end = toDate(test.earliest_end), now = toDate(s.generated);
+      return [{
+        total_r: st.total_r ?? 0, trades: st.trades ?? 0, avg_r: st.avg_r, win_rate: st.win_rate, max_dd_r: st.max_dd_r ?? 0, worst_r: st.worst_r,
+        open_r: st.open_r ?? 0, open_count: (s.open || []).length, equity: acc.equity, mode: acc.mode, server: acc.server,
+        today_net: st.today_net ?? 0, bid: pr.bid, algo_trading: term.algo_trading === true, connected: term.connected === true,
+        generated: s.generated, generated_local: s.generated_local,
+        days_elapsed: start && now ? Math.max(0, (now - start) / 864e5) : 0, days_total: start && end ? (end - start) / 864e5 : 28,
+        stop_cum_r: test.stop_cum_r ?? -10, stop_trade_r: test.stop_trade_r ?? -2, live_min_trades: test.live_min_trades ?? 40, live_min_avg_r: test.live_min_avg_r ?? 0.10
+      }];
+    }
+  });
+  dash.calc('closed', { title: 'Closed trades', description: 'One row per closed trade since the test started, with pips (1 pip = $0.10).', inputs: ['status'],
+    fn: (status) => ((status && status.closed) || []).map((t) => ({ ...t, id: String(t.id), pips: Math.round(((t.dir === 'BUY' ? 1 : -1) * (t.exit - t.entry)) / 0.1) })) });
+  dash.calc('open', { title: 'Open trades', description: 'Positions this EA has open now, with running pips (1 pip = $0.10).', inputs: ['status'],
+    fn: (status) => ((status && status.open) || []).map((t) => ({ ...t, id: String(t.id), pips: Math.round(((t.dir === 'BUY' ? 1 : -1) * (t.price - t.entry)) / 0.1) })) });
+  dash.calc('curve', { title: 'Running total in R', description: 'Cumulative R after each closed trade.', inputs: ['status'],
+    fn: (status) => ((status && status.curve) || []).map(([t, r]) => ({ time: t, cum_r: r })) });
+  dash.calc('price', { title: 'Gold price, 15-minute closes', description: 'Last 96 M15 closes of XAUUSD from MT5.', inputs: ['status'],
+    fn: (status) => (((status && status.price) || {}).m15 || []).map(([t, c]) => ({ time: t, close: c })) });
+  dash.calc('periods', {
+    title: 'Results by day, week and month',
+    description: 'Closed trades grouped by server day, week (Monday start) and month: pips, R, dollars and how each trade ended. Empty periods are included.',
+    inputs: ['status'],
+    fn: (status) => {
+      const s = status || {}, closed = s.closed || [];
+      const p = (t) => { const m = /^(\d{4})\.(\d{2})\.(\d{2})/.exec(t || ''); return m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3])) : null; };
+      const iso = (d) => d.toISOString().slice(0, 10);
+      const monday = (d) => { const x = new Date(d); x.setUTCDate(x.getUTCDate() - ((x.getUTCDay() + 6) % 7)); return x; };
+      const keyOf = (type, d) => type === 'day' ? iso(d) : type === 'week' ? iso(monday(d)) : iso(d).slice(0, 7);
+      const now = p(s.generated) || new Date();
+      const rows = new Map();
+      const add = (type, d, idx) => { const k = type + ':' + keyOf(type, d); if (!rows.has(k)) rows.set(k, { key: k, type, start: keyOf(type, d), idx, trades: 0, wins: 0, tp: 0, be: 0, early: 0, sl: 0, pips: 0, r: 0, net: 0 }); };
+      for (let i = 0; i < 60; i++) { const d = new Date(now); d.setUTCDate(d.getUTCDate() - i); add('day', d, i); }
+      for (let i = 0; i < 26; i++) { const d = monday(now); d.setUTCDate(d.getUTCDate() - 7 * i); add('week', d, i); }
+      for (let i = 0; i < 12; i++) { const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1)); add('month', d, i); }
+      for (const t of closed) {
+        const d = p(t.exit_time); if (!d) continue;
+        const pips = Math.round(((t.dir === 'BUY' ? 1 : -1) * (t.exit - t.entry)) / 0.1), r = +t.r || 0;
+        const kind = t.reason === 'TP' ? 'tp' : (Math.abs(r) <= 0.2 ? 'be' : (t.reason === 'SL' && r < 0 ? 'sl' : 'early'));
+        for (const type of ['day', 'week', 'month']) {
+          const row = rows.get(type + ':' + keyOf(type, d)); if (!row) continue;
+          row.trades++; row.pips += pips; row.r += r; row.net += +t.net || 0; row[kind]++; if (r > 0.2) row.wins++;
+        }
+      }
+      return [...rows.values()].map((x) => ({ ...x, r: Math.round(x.r * 1000) / 1000, net: Math.round(x.net * 100) / 100, win_rate: x.trades ? x.wins / x.trades : null }));
+    }
+  });
+
+  // ---- shared helpers and view state ----
+  window.xa = {
+    period: 'day', offset: 0,
+    row: () => { const d = dash.data('summary'); return d.status === 'ok' && d.data && d.data[0] ? d.data[0] : null; },
+    sgn: (v, d = 0) => (v == null || !isFinite(v)) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(d),
+    R: (v) => (v == null || !isFinite(v)) ? '—' : xa.sgn(v, 2) + 'R',
+    pip: (v) => (v == null || !isFinite(v)) ? '—' : xa.sgn(v) + ' pip',
+    usd: (v) => (v == null || !isFinite(v)) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + '$' + d3.format(',.2f')(Math.abs(v)),
+    px: (v) => (v == null || !isFinite(+v) || +v === 0) ? '—' : d3.format(',.2f')(+v),
+    tone: (v) => v > 0 ? 'up' : v < 0 ? 'down' : 'mut',
+    parse: d3.timeParse('%Y.%m.%d %H:%M'), parseLocal: d3.timeParse('%Y.%m.%d %H:%M:%S'),
+    ageMin: (r) => { const t = r && xa.parseLocal(r.generated_local); return t ? (Date.now() - t) / 60000 : Infinity; },
+    el: (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; },
+    put: (el, text, cls) => { el.textContent = text; for (const c of ['up', 'down', 'mut']) el.classList.remove(c); if (cls) el.classList.add(cls); },
+    periodRows: () => { const d = dash.data('periods'); return d.status === 'ok' ? d.data.filter((x) => x.type === xa.period).sort((a, b) => a.idx - b.idx) : []; },
+    current: () => xa.periodRows()[xa.offset] || null
+  };
+
+  // ---- tabs and controls (listeners only set classes, hidden and disabled) ----
+  const showTab = (name) => {
+    for (const s of document.querySelectorAll('.xa-sec')) s.hidden = s.id !== name;
+    for (const b of document.querySelectorAll('.xa-nav button')) b.classList.toggle('on', b.dataset.tab === name);
+    dash.setLink(name);
+    window.scrollTo({ top: 0 });
+  };
+  for (const b of document.querySelectorAll('.xa-nav button')) b.addEventListener('click', () => showTab(b.dataset.tab));
+  if (['stats', 'chart', 'trades', 'test'].includes(location.hash.slice(1))) showTab(location.hash.slice(1));
+  for (const b of document.querySelectorAll('.xa-seg button')) b.addEventListener('click', () => {
+    xa.period = b.dataset.p; xa.offset = 0;
+    for (const o of document.querySelectorAll('.xa-seg button')) o.classList.toggle('on', o === b);
+    for (const n of ['st_title', 'st_pips', 'st_sub', 'st_win', 'st_n', 'st_mix', 'st_sl', 'st_chart', 'st_chart_title', 'st_chart_total', 'st_period']) dash.draw(n);
+  });
+  for (const b of document.querySelectorAll('.xa-stepper button')) b.addEventListener('click', () => {
+    const max = Math.max(0, xa.periodRows().length - 1);
+    xa.offset = Math.min(max, Math.max(0, xa.offset - (+b.dataset.step)));
+    for (const o of document.querySelectorAll('.xa-stepper button')) o.disabled = (+o.dataset.step === 1) ? xa.offset === 0 : xa.offset >= max;
+    for (const n of ['st_title', 'st_pips', 'st_sub', 'st_win', 'st_n', 'st_mix', 'st_sl', 'st_chart', 'st_chart_total', 'st_period']) dash.draw(n);
+  });
+  dash.onData(() => {
+    const d = dash.data('closed');
+    for (const el of document.querySelectorAll('.xa-trades-empty')) el.hidden = !(d.status === 'ok' && d.data.length === 0);
+    const n = xa.periodRows().length;
+    for (const b of document.querySelectorAll('.xa-stepper button')) b.disabled = (+b.dataset.step === 1) ? xa.offset === 0 : xa.offset >= n - 1;
+  });
+
+  // ---- header ----
+  dash.draw('price_now', { mount: () => ({ timer: setInterval(() => dash.refresh('status'), 60000) }),
+    update: (el) => { const r = xa.row(); el.textContent = r && r.bid ? d3.format(',.2f')(r.bid) : '—'; },
+    unmount: (el, m) => clearInterval(m.timer) });
+  dash.draw('live', (el) => {
+    const r = xa.row(); el.replaceChildren(); if (!r) return;
+    const live = xa.ageMin(r) <= 5 && r.connected;
+    el.className = 'xa-live ' + (live ? 'on' : 'off');
+    el.append(xa.el('i', 'xa-dot'), document.createTextNode(live ? 'LIVE' : 'NO UPDATE'));
+  });
+  dash.draw('state', (el) => {
+    const r = xa.row(); el.replaceChildren(); el.className = 'xa-state'; if (!r) return;
+    let k = 'ok', t = r.open_count ? r.open_count + ' trade' + (r.open_count > 1 ? 's' : '') + ' running' : 'Watching for a setup';
+    if (!r.algo_trading) { k = 'bad'; t = 'Algo Trading off'; }
+    else if (xa.ageMin(r) > 5) { k = 'warn'; t = 'PC not updating'; }
+    el.classList.add(k); el.append(xa.el('i', 'xa-dot'), document.createTextNode(t));
+  });
+
+  // ---- signal tab ----
+  const reasonFor = (dir) => dir === 'BUY'
+    ? ['Trend breakout BUY', ['H1 uptrend: price above EMA200, EMA50 above EMA200', 'M15 close above the 40-bar high', 'Stop below the 10-bar low (at least 1.5 × ATR)']]
+    : ['Trend breakout SELL', ['H1 downtrend: price below EMA200, EMA50 below EMA200', 'M15 close below the 40-bar low', 'Stop above the 10-bar high (at least 1.5 × ATR)']];
+
+  const tradeCard = (p) => {
+    const buy = p.dir === 'BUY', sgn = buy ? 1 : -1, risk = Math.abs(p.entry - p.initial_sl);
+    const beLvl = p.entry + sgn * risk, cur = +p.price;
+    const passed = (lvl) => buy ? cur >= lvl : cur <= lvl;
+    const card = xa.el('div', 'xa-sig ' + (buy ? 'buy' : 'sell'));
+    card.dataset.source = 'open'; card.dataset.where = 'id=' + encodeURIComponent(p.id);
+    const head = xa.el('div', 'xa-sig-head');
+    head.append(xa.el('div', 'xa-sig-sym', 'XAUUSD'), xa.el('span', 'xa-side ' + (buy ? 'buy' : 'sell'), (buy ? '↗ BUY' : '↘ SELL')));
+    card.append(head, xa.el('span', 'xa-tag', p.at_breakeven ? '+1R HIT · BREAK EVEN SET' : 'RUNNING · STOP AT ' + xa.R(-1)));
+    const run = xa.el('div', 'xa-run');
+    const v = xa.el('span', 'xa-run-v ' + xa.tone(p.pips), xa.pip(p.pips)); v.dataset.field = 'pips';
+    run.append(xa.el('span', 'xa-small', 'Running'), v, xa.el('span', 'xa-run-sub', xa.R(p.r) + ' · ' + xa.usd(p.profit) + ' · ' + p.vol + ' lots'));
+    card.append(run);
+    const [title, bullets] = reasonFor(p.dir);
+    const rs = xa.el('div', 'xa-reason'); rs.append(xa.el('div', 'xa-small', 'Signal reason'), xa.el('h3', null, title));
+    const ul = xa.el('ul'); for (const b of bullets) ul.append(xa.el('li', null, b)); rs.append(ul); card.append(rs);
+    const en = xa.el('div', 'xa-entry'); const ev = xa.el('div', 'xa-entry-v', xa.px(p.entry)); ev.dataset.field = 'entry';
+    en.append(xa.el('div', 'xa-small', 'Entry'), ev); card.append(en);
+    const lv = xa.el('div', 'xa-lv');
+    const box = (cls, label, val, note, field) => { const b = xa.el('div', cls); const vv = xa.el('div', 'xa-lv-v', val); if (field) vv.dataset.field = field; b.append(xa.el('div', 'xa-small', label), vv); if (note) b.append(xa.el('div', 'xa-lv-n', note)); return b; };
+    lv.append(
+      box('stop' + (p.at_breakeven ? ' safe' : ''), p.at_breakeven ? 'Stop loss (BE)' : 'Stop loss', xa.px(p.sl), p.at_breakeven ? 'loss no longer possible' : xa.pip(-Math.round(risk / 0.1)) + ' from entry', 'sl'),
+      box(passed(beLvl) || p.at_breakeven ? 'hit' : '', '+1R · move to BE' + (passed(beLvl) || p.at_breakeven ? ' ✓' : ''), xa.px(beLvl), xa.pip(Math.round(risk / 0.1))),
+      box(passed(p.tp) ? 'hit' : '', 'Take profit · +2R' + (passed(p.tp) ? ' ✓' : ''), xa.px(p.tp), xa.pip(Math.round(Math.abs(p.tp - p.entry) / 0.1)), 'tp'),
+      box('', 'Now', xa.px(cur), xa.R(p.r), 'price')
+    );
+    card.append(lv);
+    const foot = xa.el('div', 'xa-foot'); foot.append(xa.el('span', null, '🕐 Opened ' + p.open_time + ' (server)'));
+    const btn = xa.el('button', 'xa-btn', '⧉ Copy all'); btn.type = 'button';
+    btn.addEventListener('click', () => {
+      const txt = `XAUUSD ${p.dir}\nEntry ${xa.px(p.entry)}\nSL ${xa.px(p.sl)}\nTP ${xa.px(p.tp)}`;
+      const done = () => { btn.textContent = '✓ Copied'; setTimeout(() => { btn.textContent = '⧉ Copy all'; }, 1500); };
+      if (navigator.clipboard) navigator.clipboard.writeText(txt).then(done, () => { btn.textContent = 'Copy blocked'; }); else btn.textContent = 'Copy blocked';
+    });
+    foot.append(btn); card.append(foot);
+    return card;
+  };
+
+  dash.draw('signal', (el) => {
+    const o = dash.data('open'), r = xa.row(), c = dash.data('closed');
+    el.replaceChildren();
+    if (o.status === 'error') { el.append(xa.el('p', 'xa-empty', 'Could not load the live status from Google Drive.')); return; }
+    if (o.status !== 'ok' || !r) { el.textContent = '—'; return; }
+    if (o.data.length) { const wrap = xa.el('div'); wrap.style.display = 'grid'; wrap.style.gap = '14px'; for (const p of o.data) wrap.append(tradeCard(p)); el.append(wrap); return; }
+    // no open trade: what the EA is waiting for
+    const card = xa.el('div', 'xa-sig');
+    const head = xa.el('div', 'xa-sig-head'); head.append(xa.el('div', 'xa-sig-sym', 'XAUUSD'), xa.el('span', 'xa-tag wait', 'NO OPEN TRADE')); card.append(head);
+    const m = /(\d{4})\.(\d{2})\.(\d{2}) (\d{2}):(\d{2})/.exec(r.generated || ''); const now = m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5])) : null;
+    const mins = now ? now.getUTCHours() * 60 + now.getUTCMinutes() : -1, dow = now ? now.getUTCDay() : -1;
+    const inHours = dow >= 1 && dow <= 5 && mins >= 600 && mins < 1320 && !(dow === 5 && mins >= 1320);
+    const checks = [[r.algo_trading, 'Algo Trading on in MT5'], [r.connected && xa.ageMin(r) <= 5, 'MT5 connected and updating'], [inHours, 'Inside trading hours (Mon–Fri 10:00–22:00 server, now ' + (m ? m[4] + ':' + m[5] : '—') + ')'], [r.open_count < 3, 'Room for a trade (max 3 open)']];
+    const ul = xa.el('ul', 'xa-check');
+    for (const [ok, t] of checks) { const li = xa.el('li', ok ? 'y' : 'n'); li.append(xa.el('b', null, ok ? '✓' : '✕'), document.createTextNode(t)); ul.append(li); }
+    card.append(xa.el('div', 'xa-small', 'Waiting for a breakout setup'), ul);
+    const last = c.status === 'ok' && c.data.length ? c.data[c.data.length - 1] : null;
+    if (last) {
+      const run = xa.el('div', 'xa-run'); run.dataset.source = 'closed'; run.dataset.where = 'id=' + encodeURIComponent(last.id);
+      const v = xa.el('span', 'xa-run-v ' + xa.tone(last.pips), xa.pip(last.pips)); v.dataset.field = 'pips';
+      run.append(xa.el('span', 'xa-small', 'Last trade'), v, xa.el('span', 'xa-run-sub', last.dir + ' · ' + xa.R(last.r) + ' · ' + last.reason + ' · ' + last.exit_time));
+      card.append(run);
+    } else card.append(xa.el('p', 'xa-note', 'No trades yet. The backtest averaged about 3–4 trades a week, so quiet days are normal.'));
+    el.append(card);
+  });
+
+  // ---- stats tab ----
+  const label = (row) => {
+    if (!row) return '—';
+    if (xa.period === 'day') return row.idx === 0 ? 'Today' : row.idx === 1 ? 'Yesterday' : d3.utcFormat('%a %d %b')(new Date(row.start + 'T00:00:00Z'));
+    if (xa.period === 'week') return row.idx === 0 ? 'This week' : 'Week of ' + d3.utcFormat('%d %b')(new Date(row.start + 'T00:00:00Z'));
+    return row.idx === 0 ? 'This month' : d3.utcFormat('%B %Y')(new Date(row.start + '-01T00:00:00Z'));
+  };
+  const mark = (el, row, field) => { el.dataset.source = 'periods'; el.dataset.field = field; el.dataset.where = 'key=' + encodeURIComponent(row ? row.key : ''); };
+  dash.draw('st_title', (el) => { const r = xa.current(); el.textContent = 'Total profit · ' + label(r).toLowerCase(); });
+  dash.draw('st_period', (el) => { el.textContent = label(xa.current()); });
+  dash.draw('st_pips', (el) => { const r = xa.current(); if (!r) { el.textContent = '—'; return; } mark(el, r, 'pips'); xa.put(el, r.trades ? xa.pip(r.pips) : '0 pip', xa.tone(r.pips)); });
+  dash.draw('st_sub', (el) => { const r = xa.current(); if (!r) { el.textContent = '—'; return; } mark(el, r, 'r'); el.textContent = xa.R(r.r) + ' · ' + xa.usd(r.net) + ' · ' + r.trades + ' trade' + (r.trades === 1 ? '' : 's') + ' closed'; });
+  dash.draw('st_win', (el) => { const r = xa.current(); if (!r) { el.textContent = '—'; return; } mark(el, r, 'win_rate'); xa.put(el, r.win_rate == null ? '—' : d3.format('.0%')(r.win_rate), r.win_rate == null ? 'mut' : r.win_rate >= 0.4 ? 'up' : 'down'); });
+  dash.draw('st_n', (el) => { const r = xa.current(); if (!r) { el.textContent = '—'; return; } mark(el, r, 'trades'); el.textContent = String(r.trades); });
+  dash.draw('st_mix', (el) => { const r = xa.current(); el.textContent = r ? r.tp + ' / ' + r.be + ' / ' + r.early : '—'; });
+  dash.draw('st_sl', (el) => { const r = xa.current(); if (!r) { el.textContent = '—'; return; } mark(el, r, 'sl'); el.textContent = String(r.sl); });
+  dash.draw('st_chart_title', (el) => { el.textContent = xa.period === 'day' ? 'Last 7 days' : xa.period === 'week' ? 'Last 7 weeks' : 'Last 6 months'; });
+  const windowRows = () => { const n = xa.period === 'month' ? 6 : 7; return xa.periodRows().slice(xa.offset, xa.offset + n).reverse(); };
+  dash.draw('st_chart_total', (el) => { const rows = windowRows(); if (!rows.length) { el.textContent = '—'; return; } const s = d3.sum(rows, (r) => r.pips); xa.put(el, xa.pip(s), xa.tone(s)); });
+  dash.draw('st_chart', (el) => {
+    const rows = windowRows();
+    el.replaceChildren();
+    const d = dash.data('periods');
+    if (d.status === 'error') { el.append(xa.el('p', 'xa-empty', 'Results could not be loaded.')); return; }
+    if (!rows.length) { el.textContent = '—'; return; }
+    const W = Math.max(280, el.clientWidth), H = 210, m = { t: 26, r: 6, b: 26, l: 6 };
+    const x = d3.scaleBand().domain(rows.map((r) => r.key)).range([m.l, W - m.r]).padding(0.35);
+    const ext = d3.extent(rows, (r) => r.pips); const lo = Math.min(0, ext[0]), hi = Math.max(0, ext[1]);
+    const y = d3.scaleLinear().domain(lo === hi ? [-1, 1] : [lo, hi]).range([H - m.b - 14, m.t]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img')
+      .attr('aria-label', 'Pips per ' + xa.period + ': ' + rows.map((r) => r.start + ' ' + r.pips).join(', '));
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--xa-line)').style('stroke-dasharray', '4 4');
+    const g = svg.selectAll('g.b').data(rows).join('g').attr('class', 'b');
+    g.append('rect').attr('x', (r) => x(r.key)).attr('width', x.bandwidth()).attr('rx', 6)
+      .attr('y', (r) => r.pips >= 0 ? y(r.pips) : y(0)).attr('height', (r) => r.trades ? Math.max(3, Math.abs(y(r.pips) - y(0))) : 0)
+      .style('fill', (r) => r.pips >= 0 ? 'var(--xa-up)' : 'var(--xa-down)');
+    g.append('text').attr('x', (r) => x(r.key) + x.bandwidth() / 2).attr('text-anchor', 'middle')
+      .attr('y', (r) => r.pips >= 0 ? y(r.pips) - 6 : y(r.pips) + 14).style('fill', (r) => r.pips > 0 ? 'var(--xa-up)' : r.pips < 0 ? 'var(--xa-down)' : 'var(--xa-mut)')
+      .style('font-weight', 700).text((r) => r.trades ? xa.sgn(r.pips) : '');
+    const fmt = (r) => xa.period === 'day' ? (r.idx === 0 ? 'Today' : d3.utcFormat('%a')(new Date(r.start + 'T00:00:00Z'))) : xa.period === 'week' ? d3.utcFormat('%d %b')(new Date(r.start + 'T00:00:00Z')) : d3.utcFormat('%b')(new Date(r.start + '-01T00:00:00Z'));
+    g.append('text').attr('x', (r) => x(r.key) + x.bandwidth() / 2).attr('y', H - 6).attr('text-anchor', 'middle')
+      .style('fill', (r) => r.idx === 0 ? 'var(--xa-warn)' : 'var(--xa-mut)').text(fmt);
+  });
+
+  // ---- chart tab ----
+  dash.draw('price', (el) => {
+    const d = dash.data('price'), o = dash.data('open');
+    el.replaceChildren();
+    if (d.status === 'error') { el.append(xa.el('p', 'xa-empty', 'The price history could not be loaded.')); return; }
+    if (d.status !== 'ok' || !d.data.length) { el.textContent = '—'; return; }
+    const pts = d.data.map((p) => ({ t: xa.parse(p.time), c: +p.close, label: p.time })).filter((p) => p.t && isFinite(p.c));
+    const levels = [];
+    for (const p of (o.status === 'ok' ? o.data : [])) { levels.push([+p.entry, 'var(--xa-cyan)']); if (+p.sl > 0) levels.push([+p.sl, 'var(--xa-down)']); if (+p.tp > 0) levels.push([+p.tp, 'var(--xa-up)']); }
+    const W = Math.max(280, el.clientWidth), H = 220, m = { t: 10, r: 52, b: 24, l: 4 };
+    const x = d3.scaleTime().domain(d3.extent(pts, (p) => p.t)).range([m.l, W - m.r]);
+    const y = d3.scaleLinear().domain(d3.extent(pts.map((p) => p.c).concat(levels.map((l) => l[0])))).nice().range([H - m.b, m.t]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Gold price, last 24 hours');
+    svg.append('g').attr('transform', `translate(${W - m.r},0)`).call(d3.axisRight(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat(d3.format(',.0f')))
+      .call((g) => { g.select('.domain').remove(); g.selectAll('line').style('stroke', 'var(--xa-line)'); });
+    svg.append('g').attr('transform', `translate(0,${H - m.b})`).call(d3.axisBottom(x).ticks(Math.max(2, Math.floor(W / 110))).tickFormat(d3.timeFormat('%H:%M')))
+      .call((g) => { g.select('.domain').style('stroke', 'var(--xa-line)'); g.selectAll('line').style('stroke', 'var(--xa-line)'); });
+    const area = d3.area().x((p) => x(p.t)).y0(H - m.b).y1((p) => y(p.c));
+    svg.append('path').datum(pts).attr('d', area).style('fill', 'var(--xa-cyan)').style('opacity', 0.08);
+    for (const [v, col] of levels) svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(v)).attr('y2', y(v)).style('stroke', col).style('stroke-dasharray', '5 4');
+    svg.append('path').datum(pts).attr('d', d3.line().x((p) => x(p.t)).y((p) => y(p.c))).style('fill', 'none').style('stroke', 'var(--xa-cyan)').style('stroke-width', 1.8);
+    const last = pts[pts.length - 1];
+    svg.append('circle').attr('cx', x(last.t)).attr('cy', y(last.c)).attr('r', 4).style('fill', 'var(--xa-cyan)');
+    const tip = xa.el('div', 'xa-tip'); tip.hidden = true; el.append(tip);
+    const dot = svg.append('circle').attr('r', 4).style('fill', 'var(--xa-cyan)').style('display', 'none');
+    const bis = d3.bisector((p) => p.t).center;
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).style('fill', 'transparent')
+      .on('pointermove', (ev) => { const [mx] = d3.pointer(ev); const p = pts[bis(pts, x.invert(mx))]; dot.style('display', null).attr('cx', x(p.t)).attr('cy', y(p.c));
+        tip.hidden = false; tip.textContent = p.label + ' · ' + p.c.toFixed(2); const pxl = x(p.t) / W * el.clientWidth; tip.style.left = Math.min(Math.max(0, pxl - 70), el.clientWidth - 150) + 'px'; tip.style.top = '0px'; })
+      .on('pointerleave', () => { tip.hidden = true; dot.style('display', 'none'); });
+  });
+
+  dash.draw('curve', (el) => {
+    const d = dash.data('curve');
+    el.replaceChildren();
+    if (d.status === 'error') { el.append(xa.el('p', 'xa-empty', 'The trade history could not be loaded.')); return; }
+    if (d.status !== 'ok') { el.textContent = '—'; return; }
+    const pts = [{ cum_r: 0, i: 0, time: 'start' }].concat(d.data.map((p, i) => ({ ...p, i: i + 1 })));
+    if (pts.length < 2) { el.append(xa.el('p', 'xa-empty', 'The line starts once the first trade closes.')); return; }
+    const W = Math.max(280, el.clientWidth), H = 210, m = { t: 12, r: 12, b: 24, l: 40 };
+    const x = d3.scaleLinear().domain([0, pts.length - 1]).range([m.l, W - m.r]);
+    const ext = d3.extent(pts, (p) => p.cum_r);
+    const y = d3.scaleLinear().domain([Math.min(ext[0], -2), Math.max(ext[1], 2)]).nice().range([H - m.b, m.t]);
+    const svg = d3.select(el).append('svg').attr('width', '100%').attr('viewBox', `0 0 ${W} ${H}`).attr('role', 'img').attr('aria-label', 'Running total in R over ' + (pts.length - 1) + ' trades');
+    svg.append('g').attr('transform', `translate(${m.l},0)`).call(d3.axisLeft(y).ticks(5).tickSize(-(W - m.l - m.r)).tickFormat((v) => v + 'R'))
+      .call((g) => { g.select('.domain').remove(); g.selectAll('line').style('stroke', 'var(--xa-line)'); });
+    svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(0)).attr('y2', y(0)).style('stroke', 'var(--xa-mut)');
+    if (y.domain()[0] <= -10) svg.append('line').attr('x1', m.l).attr('x2', W - m.r).attr('y1', y(-10)).attr('y2', y(-10)).style('stroke', 'var(--xa-down)').style('stroke-dasharray', '4 3');
+    const lastV = pts[pts.length - 1].cum_r, col = lastV >= 0 ? 'var(--xa-up)' : 'var(--xa-down)';
+    svg.append('path').datum(pts).attr('d', d3.line().x((p) => x(p.i)).y((p) => y(p.cum_r))).style('fill', 'none').style('stroke', col).style('stroke-width', 2);
+    svg.append('circle').attr('cx', x(pts.length - 1)).attr('cy', y(lastV)).attr('r', 4).style('fill', col);
+    const tip = xa.el('div', 'xa-tip'); tip.hidden = true; el.append(tip);
+    svg.append('rect').attr('x', m.l).attr('y', m.t).attr('width', W - m.l - m.r).attr('height', H - m.t - m.b).style('fill', 'transparent')
+      .on('pointermove', (ev) => { const [mx] = d3.pointer(ev); const i = Math.max(1, Math.min(pts.length - 1, Math.round(x.invert(mx)))); const p = pts[i];
+        tip.hidden = false; tip.textContent = 'Trade ' + i + ' · ' + p.time + ' · ' + xa.R(p.cum_r); const pxl = x(i) / W * el.clientWidth; tip.style.left = Math.min(Math.max(0, pxl - 80), el.clientWidth - 200) + 'px'; tip.style.top = '0px'; })
+      .on('pointerleave', () => { tip.hidden = true; });
+  });
+
+  // ---- trades tab ----
+  dash.draw('trades', (tb) => {
+    const d = dash.data('closed'); tb.replaceChildren(); if (d.status !== 'ok') return;
+    for (const t of d.data.slice().reverse()) {
+      const tr = xa.el('tr'); tr.dataset.key = t.id;
+      const cells = [[t.exit_time], [t.dir, t.dir === 'BUY' ? 'up' : 'down'], [xa.px(t.entry), 'num'], [xa.px(t.exit), 'num'], [t.reason], [xa.R(t.r), 'num ' + xa.tone(t.r)], [xa.usd(t.net), 'num ' + xa.tone(t.net)]];
+      for (const [v, k] of cells) tr.append(xa.el('td', k || null, v == null ? '—' : String(v)));
+      tb.append(tr);
+    }
+  });
+
+  // ---- test tab ----
+  dash.draw('bars', (el) => {
+    const r = xa.row(); el.replaceChildren(); if (!r) return;
+    for (const [lab, v, max, txt, col] of [['Days running', r.days_elapsed, r.days_total, r.days_elapsed.toFixed(1) + ' of ' + Math.round(r.days_total), 'var(--xa-cyan)'], ['Trades closed', r.trades, r.live_min_trades, r.trades + ' of ' + r.live_min_trades, 'var(--xa-up)']]) {
+      const b = xa.el('div'); const top = xa.el('div', 'xa-bar-top'); top.append(xa.el('span', null, lab), xa.el('span', null, txt));
+      const tr = xa.el('div', 'xa-track'); const f = xa.el('div', 'xa-fill'); f.style.width = Math.min(100, max ? v / max * 100 : 0) + '%'; f.style.background = col; tr.append(f); b.append(top, tr); el.append(b);
+    }
+  });
+  dash.draw('rule', (el) => {
+    const r = xa.row(); el.className = 'xa-rule'; if (!r) { el.textContent = '—'; return; }
+    let k = '', t;
+    if (r.total_r <= r.stop_cum_r) { k = 'bad'; t = 'Stop the test: the total has reached ' + xa.R(r.total_r) + ', past the −10R limit.'; }
+    else if (r.worst_r != null && r.worst_r < r.stop_trade_r) { k = 'bad'; t = 'Stop and investigate: one trade lost ' + xa.R(r.worst_r) + ', more than 2R.'; }
+    else if (!r.algo_trading) { k = 'warn'; t = 'Not running: Algo Trading is off in MT5.'; }
+    else if (r.trades >= r.live_min_trades && r.avg_r >= r.live_min_avg_r) t = 'Passes the bar for a tiny live test, if every checklist item is also ticked.';
+    else if (r.days_elapsed >= r.days_total && r.trades < 20) { k = 'warn'; t = '4 weeks done with fewer than 20 trades: keep going to 8 weeks.'; }
+    else t = 'Keep testing on demo. No stop rule has been hit.';
+    if (k) el.classList.add(k); el.textContent = t;
+  });
+  dash.draw('v_total', (el) => { const r = xa.row(); xa.put(el, r ? xa.R(r.total_r) : '—', r ? xa.tone(r.total_r) : ''); });
+  dash.draw('v_avg', (el) => { const r = xa.row(); xa.put(el, r ? xa.R(r.avg_r) : '—', r && r.avg_r != null ? xa.tone(r.avg_r) : 'mut'); });
+  dash.draw('v_dd', (el) => { const r = xa.row(); xa.put(el, r ? (r.max_dd_r > 0 ? '−' : '') + (r.max_dd_r || 0).toFixed(2) + 'R' : '—', r && r.max_dd_r > 0 ? 'down' : ''); });
+  dash.draw('v_eq', (el) => { const r = xa.row(); el.textContent = r ? '$' + d3.format(',.0f')(r.equity) : '—'; });
+  dash.draw('updated', (el) => { const r = xa.row(); if (!r) { el.textContent = '—'; return; } const a = xa.ageMin(r); el.textContent = 'Last update from the PC: ' + r.generated_local + (isFinite(a) && a >= 0 ? ' (' + (a < 1 ? 'just now' : Math.round(a) + ' min ago') + ')' : '') + '.'; });
+</script>
+
+<script>
+  dash.start();
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
