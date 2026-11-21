@@ -1,5 +1,5 @@
 // Offline shell for XauBot: app files from cache when offline, live data always from the network.
-const CACHE = 'xaubot-v1';
+const CACHE = 'xaubot-16d8e2a159';
 const SHELL = ['./', 'index.html', 'shim.js', 'config.js', 'manifest.webmanifest', 'icons/icon-192.png', 'icons/apple-touch-icon.png', 'https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js'];
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => { e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())); });

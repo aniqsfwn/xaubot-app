@@ -18,6 +18,10 @@
   html, body { margin: 0; background: #0a1020; -webkit-text-size-adjust: 100%; }
   #dash-root .xa-wrap { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
   #xa-error { margin: 0; }
+  #dash-root #xa-bot { grid-template-columns: 1fr 1fr; margin: 0 0 12px; }
+  #dash-root #xa-bot button { padding: 9px; font-size: 14px; }
+  #dash-root .xa-nav { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; }
+  #dash-root .xa { min-height: 100vh; padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
 </style>
 <style>
   #dash-root { --dash-gutter: 0; }
@@ -133,6 +137,7 @@
 <div class="xa" id="app">
   <div class="xa-wrap">
     <p id="xa-error" class="xa-rule bad" hidden></p>
+    <div class="xa-seg" id="xa-bot" role="group" aria-label="Which bot" hidden></div>
     <div class="xa-card xa-top" id="ticker">
       <div><div class="xa-sym">XAUUSD</div><div class="xa-small">MT5 · MetaQuotes-Demo</div></div>
       <div><div class="xa-price" data-draw="price_now" data-source="summary" data-field="bid" data-row="0">—</div><div class="xa-live" data-draw="live" data-source="summary"></div></div>
@@ -272,7 +277,7 @@
         total_r: st.total_r ?? 0, trades: st.trades ?? 0, avg_r: st.avg_r, win_rate: st.win_rate, max_dd_r: st.max_dd_r ?? 0, worst_r: st.worst_r,
         open_r: st.open_r ?? 0, open_count: (s.open || []).length, equity: acc.equity, mode: acc.mode, server: acc.server,
         today_net: st.today_net ?? 0, bid: pr.bid, algo_trading: term.algo_trading === true, connected: term.connected === true,
-        generated: s.generated, generated_local: s.generated_local,
+        generated: s.generated, generated_local: s.generated_local, windows: test.windows || '10:00-22:00', per_week: test.expected_trades_per_week, bot_name: test.name || '',
         days_elapsed: start && now ? Math.max(0, (now - start) / 864e5) : 0, days_total: start && end ? (end - start) / 864e5 : 28,
         stop_cum_r: test.stop_cum_r ?? -10, stop_trade_r: test.stop_trade_r ?? -2, live_min_trades: test.live_min_trades ?? 40, live_min_avg_r: test.live_min_avg_r ?? 0.10
       }];
@@ -432,8 +437,9 @@
     const head = xa.el('div', 'xa-sig-head'); head.append(xa.el('div', 'xa-sig-sym', 'XAUUSD'), xa.el('span', 'xa-tag wait', 'NO OPEN TRADE')); card.append(head);
     const m = /(\d{4})\.(\d{2})\.(\d{2}) (\d{2}):(\d{2})/.exec(r.generated || ''); const now = m ? new Date(Date.UTC(+m[1], m[2] - 1, +m[3], +m[4], +m[5])) : null;
     const mins = now ? now.getUTCHours() * 60 + now.getUTCMinutes() : -1, dow = now ? now.getUTCDay() : -1;
-    const inHours = dow >= 1 && dow <= 5 && mins >= 600 && mins < 1320 && !(dow === 5 && mins >= 1320);
-    const checks = [[r.algo_trading, 'Algo Trading on in MT5'], [r.connected && xa.ageMin(r) <= 5, 'MT5 connected and updating'], [inHours, 'Inside trading hours (Mon–Fri 10:00–22:00 server, now ' + (m ? m[4] + ':' + m[5] : '—') + ')'], [r.open_count < 3, 'Room for a trade (max 3 open)']];
+    const w = /(\d{2}):(\d{2})-(\d{2}):(\d{2})/.exec(r.windows || '10:00-22:00') || [0, 10, 0, 22, 0], wFrom = w[1] * 60 + +w[2], wTo = w[3] * 60 + +w[4];
+    const inHours = dow >= 1 && dow <= 5 && mins >= wFrom && mins < wTo;
+    const checks = [[r.algo_trading, 'Algo Trading on in MT5'], [r.connected && xa.ageMin(r) <= 5, 'MT5 connected and updating'], [inHours, 'Inside trading hours (Mon–Fri ' + (r.windows || '10:00-22:00').replace('-', '–') + ' server, now ' + (m ? m[4] + ':' + m[5] : '—') + ')'], [r.open_count < 3, 'Room for a trade (max 3 open)']];
     const ul = xa.el('ul', 'xa-check');
     for (const [ok, t] of checks) { const li = xa.el('li', ok ? 'y' : 'n'); li.append(xa.el('b', null, ok ? '✓' : '✕'), document.createTextNode(t)); ul.append(li); }
     card.append(xa.el('div', 'xa-small', 'Waiting for a breakout setup'), ul);
@@ -443,7 +449,7 @@
       const v = xa.el('span', 'xa-run-v ' + xa.tone(last.pips), xa.pip(last.pips)); v.dataset.field = 'pips';
       run.append(xa.el('span', 'xa-small', 'Last trade'), v, xa.el('span', 'xa-run-sub', last.dir + ' · ' + xa.R(last.r) + ' · ' + last.reason + ' · ' + last.exit_time));
       card.append(run);
-    } else card.append(xa.el('p', 'xa-note', 'No trades yet. The backtest averaged about 3–4 trades a week, so quiet days are normal.'));
+    } else card.append(xa.el('p', 'xa-note', 'No trades yet. The backtest averaged about ' + (r.per_week ? String(Math.round(r.per_week)) : '3–4') + ' trades a week, so quiet days are normal.'));
     el.append(card);
   });
 

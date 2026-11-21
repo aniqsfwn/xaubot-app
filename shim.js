@@ -2,7 +2,39 @@
 // Data: the XauBot status.json kept in a secret GitHub Gist by the PC uploader (see upload_status.ps1).
 (function () {
   const cfg = window.XAUBOT_CONFIG || {};
-  const S = { calcs: {}, draws: {}, onData: [], raw: { status: 'loading', data: null, message: '' }, cache: {}, etag: null, last: 0, busy: false };
+  const S = { calcs: {}, draws: {}, onData: [], raw: { status: 'loading', data: null, message: '' }, cache: {}, etag: null, last: 0, busy: false, full: null, bot: 0 };
+  try { S.bot = parseInt(localStorage.getItem('xaubot.bot') || '0', 10) || 0; } catch (e) { /* storage blocked */ }
+
+  // status.json v2 carries every bot in "bots"; the page shows one at a time (top-level fields = the selected bot)
+  function view(full, i) {
+    const bots = Array.isArray(full && full.bots) ? full.bots : [];
+    if (!bots.length) return full;
+    const b = bots[Math.min(Math.max(i, 0), bots.length - 1)];
+    return Object.assign({}, full, { test: b.test, stats: b.stats, open: b.open, closed: b.closed, curve: b.curve });
+  }
+  function renderSwitch() {
+    const box = document.getElementById('xa-bot');
+    if (!box) return;
+    const bots = (S.full && Array.isArray(S.full.bots)) ? S.full.bots : [];
+    box.hidden = bots.length < 2;
+    if (bots.length < 2) return;
+    if (box.childElementCount !== bots.length) {
+      box.replaceChildren(...bots.map((b, i) => {
+        const t = b.test || {}, btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = (t.name || 'Bot ' + (i + 1)) + ' · ' + (t.windows || '').replace(/:00/g, '').replace('-', '–') + 'h';
+        btn.addEventListener('click', () => selectBot(i));
+        return btn;
+      }));
+    }
+    [...box.children].forEach((btn, i) => { btn.classList.toggle('on', i === S.bot); btn.setAttribute('aria-pressed', String(i === S.bot)); });
+  }
+  function selectBot(i) {
+    S.bot = i;
+    try { localStorage.setItem('xaubot.bot', String(i)); } catch (e) { /* ignore */ }
+    if (S.full) { S.raw = { status: 'ok', data: view(S.full, S.bot), message: '' }; S.cache = {}; }
+    runAll();
+  }
   const mounted = new WeakMap();
 
   function runDraw(name) {
@@ -17,6 +49,7 @@
     });
   }
   function runAll() {
+    renderSwitch();
     S.onData.forEach((f) => { try { f(); } catch (e) { console.error(e); } });
     Object.keys(S.draws).forEach(runDraw);
     const banner = document.getElementById('xa-error');
@@ -41,7 +74,9 @@
       const f = gist.files && gist.files['status.json'];
       if (!f) throw new Error('status.json is missing from the gist');
       const text = f.truncated ? await (await fetch(f.raw_url, { cache: 'no-store' })).text() : f.content;
-      S.raw = { status: 'ok', data: JSON.parse(text), message: '' };
+      S.full = JSON.parse(text);
+      if (!Array.isArray(S.full.bots) || S.bot >= S.full.bots.length) S.bot = 0;
+      S.raw = { status: 'ok', data: view(S.full, S.bot), message: '' };
       S.cache = {};
     } catch (e) {
       if (S.raw.status !== 'ok') S.raw = { status: 'error', data: null, message: e.message || String(e) };
